@@ -4,10 +4,10 @@ type (
 	TemplateResponse map[string]TemplateJson
 
 	TemplateJson struct {
-		Order          int                     `json:"order"`
-		Template       string                  `json:"template"`
-		MappingsByType map[string]MappingsJson `json:"mappings"`
-		Settings       struct {
+		Order                int                     `json:"order"`
+		TemplateIndexPattern string                  `json:"template"`
+		MappingsByType       map[string]MappingsJson `json:"mappings"`
+		Settings             struct {
 			Index struct {
 				RefreshInterval  string `json:"refresh_interval"`
 				NumberOfReplicas int    `json:"number_of_replicas"`

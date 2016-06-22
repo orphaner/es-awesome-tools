@@ -1,7 +1,7 @@
 package at_mapping
 
 import (
-	"../eslib"
+	"github.com/orphaner/es-awesome-tools/eslib"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -98,7 +98,7 @@ func linkIndexTypeAndTemplate() []*TemplateLink {
 		// Puis des types
 		for typeName, mapping := range indexValue.MappingsByType {
 
-			templateName, template := searchForTemplate(Templates, indexName)
+			templateName, template := searchForTemplate(indexName)
 			links = append(links, &TemplateLink{
 				IndexName:    indexName,
 				TypeName:     typeName,
@@ -111,9 +111,9 @@ func linkIndexTypeAndTemplate() []*TemplateLink {
 	return links
 }
 
-func searchForTemplate(templates *eslib.TemplateResponse, indexName string) (string, *eslib.TemplateJson) {
-	for templateName, templateValue := range *templates {
-		pattern := getRegexPatternFromTemplateValue(templateValue.Template)
+func searchForTemplate(indexName string) (string, *eslib.TemplateJson) {
+	for templateName, templateValue := range *Templates {
+		pattern := getRegexPatternFromTemplateValue(templateValue.TemplateIndexPattern)
 		regex := regexp.MustCompile(pattern)
 		if regex.MatchString(indexName) {
 			return templateName, &templateValue
@@ -122,8 +122,8 @@ func searchForTemplate(templates *eslib.TemplateResponse, indexName string) (str
 	return "", nil
 }
 
-func getRegexPatternFromTemplateValue(template string) (pattern string) {
-	pattern = strings.Replace(pattern, ".", "\\.", -1)
+func getRegexPatternFromTemplateValue(templateIndexPattern string) (pattern string) {
+	pattern = strings.Replace(templateIndexPattern, ".", "\\.", -1)
 	pattern = strings.Replace(pattern, "*", ".*", -1)
-	return
+	return pattern
 }

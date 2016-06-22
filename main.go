@@ -1,6 +1,6 @@
 package main
 
-import mapping "./at_mapping"
+import mapping "github.com/orphaner/es-awesome-tools/at_mapping"
 
 func main() {
 	mapping.CliRun()

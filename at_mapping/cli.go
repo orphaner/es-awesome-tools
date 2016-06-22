@@ -1,7 +1,7 @@
 package at_mapping
 
 import (
-	"../eslib"
+	"github.com/orphaner/es-awesome-tools/eslib"
 	"fmt"
 	"os"
 	"text/tabwriter"
