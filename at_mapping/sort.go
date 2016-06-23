@@ -1,13 +1,12 @@
 package at_mapping
 
 import (
-	"github.com/orphaner/es-awesome-tools/eslib"
 	"strings"
 )
 
 type (
 	byIndexAndTypeSort []TemplateLink
-	byOrderSort        []eslib.TemplateJson
+	byOrderSort        []applicableTemplate
 )
 
 func (by byIndexAndTypeSort) Len() int {
@@ -34,7 +33,7 @@ func (by byOrderSort) Swap(i, j int) {
 	by[i], by[j] = by[j], by[i]
 }
 func (by byOrderSort) Less(i, j int) bool {
-	if by[i].Order < by[j].Order {
+	if by[i].template.Order < by[j].template.Order {
 		return true
 	}
 	return false

@@ -20,6 +20,10 @@ type (
 		EffectiveMapping eslib.MappingsJson
 		ExpectedMapping  eslib.MappingsJson
 	}
+	applicableTemplate struct {
+		name     string
+		template eslib.TemplateJson
+	}
 )
 
 var (
@@ -85,7 +89,7 @@ func GetIndexTypeAndTemplateLink() []TemplateLink {
 				TypeName:         typeName,
 				TemplateName:     "templateName",
 				EffectiveMapping: mapping,
-				ExpectedMapping: expectedMapping,
+				ExpectedMapping:  expectedMapping,
 			})
 		}
 	}
@@ -94,30 +98,30 @@ func GetIndexTypeAndTemplateLink() []TemplateLink {
 }
 
 func calculateExpectedMapping(indexName string, typeName string) (expectedMapping eslib.MappingsJson) {
-	var applicableTemplateNames []string = searchForApplicableTemplate(indexName)
-
-	var applicableTemplates []eslib.TemplateJson
-	for _, templateName := range applicableTemplateNames {
-		template := templates[templateName]
-		applicableTemplates = append(applicableTemplates, template)
-	}
+	var applicableTemplates []applicableTemplate = searchForApplicableTemplate(indexName)
 	sort.Sort(byOrderSort(applicableTemplates))
 
 	for _, templateValue := range applicableTemplates {
-		mergo.Map(&expectedMapping, templateValue.MappingsByType[typeName])
+		mergo.Map(&expectedMapping, templateValue.template.MappingsByType[typeName])
 	}
 	return expectedMapping
 }
 
-func searchForApplicableTemplate(indexName string) (applicableTemplateNames []string) {
+func searchForApplicableTemplate(indexName string) (result []applicableTemplate) {
+	// Pour chacun des templates
 	for templateName, templateValue := range templates {
 		pattern := getRegexPatternFromTemplateValue(templateValue.TemplateIndexPattern)
 		regex := regexp.MustCompile(pattern)
+
+		// On regarde si le pattern correspond à l'index
 		if regex.MatchString(indexName) {
-			applicableTemplateNames = append(applicableTemplateNames, templateName)
+			result = append(result, applicableTemplate{
+				name:     templateName,
+				template: templateValue,
+			})
 		}
 	}
-	return applicableTemplateNames
+	return result
 }
 
 func getRegexPatternFromTemplateValue(templateIndexPattern string) (pattern string) {
