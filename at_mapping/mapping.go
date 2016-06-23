@@ -1,9 +1,10 @@
 package at_mapping
 
 import (
-	"github.com/orphaner/es-awesome-tools/eslib"
 	"encoding/json"
 	"fmt"
+	"github.com/imdario/mergo"
+	"github.com/orphaner/es-awesome-tools/eslib"
 	"log"
 	"net/http"
 	"regexp"
@@ -13,48 +14,28 @@ import (
 
 type (
 	TemplateLink struct {
-		IndexName    string
-		TypeName     string
-		TemplateName string
-		Mapping      *eslib.MappingsJson
-		Template     *eslib.TemplateJson
+		IndexName        string
+		TypeName         string
+		TemplateName     string
+		EffectiveMapping eslib.MappingsJson
+		ExpectedMapping  eslib.MappingsJson
 	}
-	byIndexAndTypeSort []*TemplateLink
 )
 
 var (
 	esClient  *eslib.EsClient
-	Templates *eslib.TemplateResponse
-	Mappings  *eslib.MappingResponse
-	Links     []*TemplateLink
+	templates eslib.TemplateResponse
+	mappings  eslib.MappingResponse
 )
-
-func (by byIndexAndTypeSort) Len() int {
-	return len(by)
-}
-func (by byIndexAndTypeSort) Swap(i, j int) {
-	by[i], by[j] = by[j], by[i]
-}
-func (by byIndexAndTypeSort) Less(i, j int) bool {
-	if strings.Compare(by[i].IndexName, by[j].IndexName) == -1 {
-		return true
-	}
-	if strings.Compare(by[i].TypeName, by[i].TypeName) == -1 {
-		return true
-	}
-	return false
-}
 
 func FillInData(esClientParam *eslib.EsClient, filterIndex string, filterTypes string) {
 	esClient = esClientParam
 
-	Templates = getTemplate()
-	Mappings = getMapping(filterIndex, filterTypes)
-	Links = linkIndexTypeAndTemplate()
-	sort.Sort(byIndexAndTypeSort(Links))
+	templates = getTemplate()
+	mappings = getMapping(filterIndex, filterTypes)
 }
 
-func getTemplate() *eslib.TemplateResponse {
+func getTemplate() eslib.TemplateResponse {
 
 	request, err := esClient.NewRequest("GET", "_template", "")
 	if err != nil {
@@ -68,10 +49,10 @@ func getTemplate() *eslib.TemplateResponse {
 	var template eslib.TemplateResponse
 	json.NewDecoder(resp.Body).Decode(&template)
 
-	return &template
+	return template
 }
 
-func getMapping(filterIndex string, filterTypes string) *eslib.MappingResponse {
+func getMapping(filterIndex string, filterTypes string) eslib.MappingResponse {
 
 	url := fmt.Sprintf("%s/_mapping/%s", filterIndex, filterTypes)
 	request, err := esClient.NewRequest("GET", url, "")
@@ -86,40 +67,57 @@ func getMapping(filterIndex string, filterTypes string) *eslib.MappingResponse {
 	var mapping eslib.MappingResponse
 	json.NewDecoder(resp.Body).Decode(&mapping)
 
-	return &mapping
+	return mapping
 }
 
-func linkIndexTypeAndTemplate() []*TemplateLink {
-	var links []*TemplateLink
+func GetIndexTypeAndTemplateLink() []TemplateLink {
+	var links []TemplateLink
 
 	// Parcours des index
-	for indexName, indexValue := range *Mappings {
+	for indexName, indexValue := range mappings {
 
 		// Puis des types
 		for typeName, mapping := range indexValue.MappingsByType {
 
-			templateName, template := searchForTemplate(indexName)
-			links = append(links, &TemplateLink{
-				IndexName:    indexName,
-				TypeName:     typeName,
-				TemplateName: templateName,
-				Mapping:      &mapping,
-				Template:     template,
+			expectedMapping := calculateExpectedMapping(indexName, typeName)
+			links = append(links, TemplateLink{
+				IndexName:        indexName,
+				TypeName:         typeName,
+				TemplateName:     "templateName",
+				EffectiveMapping: mapping,
+				ExpectedMapping: expectedMapping,
 			})
 		}
 	}
+	sort.Sort(byIndexAndTypeSort(links))
 	return links
 }
 
-func searchForTemplate(indexName string) (string, *eslib.TemplateJson) {
-	for templateName, templateValue := range *Templates {
+func calculateExpectedMapping(indexName string, typeName string) (expectedMapping eslib.MappingsJson) {
+	var applicableTemplateNames []string = searchForApplicableTemplate(indexName)
+
+	var applicableTemplates []eslib.TemplateJson
+	for _, templateName := range applicableTemplateNames {
+		template := templates[templateName]
+		applicableTemplates = append(applicableTemplates, template)
+	}
+	sort.Sort(byOrderSort(applicableTemplates))
+
+	for _, templateValue := range applicableTemplates {
+		mergo.Map(&expectedMapping, templateValue.MappingsByType[typeName])
+	}
+	return expectedMapping
+}
+
+func searchForApplicableTemplate(indexName string) (applicableTemplateNames []string) {
+	for templateName, templateValue := range templates {
 		pattern := getRegexPatternFromTemplateValue(templateValue.TemplateIndexPattern)
 		regex := regexp.MustCompile(pattern)
 		if regex.MatchString(indexName) {
-			return templateName, &templateValue
+			applicableTemplateNames = append(applicableTemplateNames, templateName)
 		}
 	}
-	return "", nil
+	return applicableTemplateNames
 }
 
 func getRegexPatternFromTemplateValue(templateIndexPattern string) (pattern string) {
