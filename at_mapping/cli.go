@@ -9,12 +9,16 @@ import (
 )
 
 var w *tabwriter.Writer
+var mappingTool *MappingTool
 
 func CliRun() {
 	esClient := eslib.NewEsClient()
 	esClient.SetFromFlag(Flags.Hostname)
+	mappingTool = NewMappingTool(esClient)
 
-	FillInData(esClient, Flags.Index, Flags.Types)
+	mappingTool.FillInData(Flags.Index, Flags.Types)
+
+	fmt.Fprintln(os.Stdout, "%+v", &mappingTool.Templates)
 	printIndexTemplateSummary()
 	printIndexMapping()
 }
@@ -22,7 +26,7 @@ func CliRun() {
 func printIndexTemplateSummary() {
 	w = new(tabwriter.Writer)
 	w.Init(os.Stdout, 0, 8, 2, ' ', tabwriter.Debug)
-	for _, link := range GetIndexTypeAndTemplateLink() {
+	for _, link := range mappingTool.GetIndexTypeAndTemplateLink() {
 		templateName := link.TemplateName
 		if link.TemplateName == "" {
 			templateName = "NO TEMPLATE FOUND"
@@ -33,7 +37,7 @@ func printIndexTemplateSummary() {
 }
 
 func printIndexMapping() {
-	for _, link := range GetIndexTypeAndTemplateLink() {
+	for _, link := range mappingTool.GetIndexTypeAndTemplateLink() {
 		fmt.Fprintf(os.Stdout, "----- %s/%s -----\n", link.IndexName, link.TypeName)
 
 		fmt.Fprintf(w, "%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n", "Property",

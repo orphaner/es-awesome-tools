@@ -13,6 +13,12 @@ import (
 )
 
 type (
+	MappingTool struct {
+		esClient  *eslib.EsClient
+		Templates eslib.TemplateResponse
+		mappings  eslib.MappingResponse
+	}
+
 	TemplateLink struct {
 		IndexName        string
 		TypeName         string
@@ -26,22 +32,20 @@ type (
 	}
 )
 
-var (
-	esClient  *eslib.EsClient
-	templates eslib.TemplateResponse
-	mappings  eslib.MappingResponse
-)
-
-func FillInData(esClientParam *eslib.EsClient, filterIndex string, filterTypes string) {
-	esClient = esClientParam
-
-	templates = getTemplate()
-	mappings = getMapping(filterIndex, filterTypes)
+func NewMappingTool(esClientParam *eslib.EsClient) *MappingTool {
+	return &MappingTool{
+		esClient: esClientParam,
+	}
 }
 
-func getTemplate() eslib.TemplateResponse {
+func (tool *MappingTool) FillInData(filterIndex string, filterTypes string) {
+	tool.Templates = tool.getTemplate()
+	tool.mappings = tool.getMapping(filterIndex, filterTypes)
+}
 
-	request, err := esClient.NewRequest("GET", "_template", "")
+func (tool *MappingTool) getTemplate() eslib.TemplateResponse {
+
+	request, err := tool.esClient.NewRequest("GET", "_template", "")
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -56,10 +60,10 @@ func getTemplate() eslib.TemplateResponse {
 	return template
 }
 
-func getMapping(filterIndex string, filterTypes string) eslib.MappingResponse {
+func (tool *MappingTool) getMapping(filterIndex string, filterTypes string) eslib.MappingResponse {
 
 	url := fmt.Sprintf("%s/_mapping/%s", filterIndex, filterTypes)
-	request, err := esClient.NewRequest("GET", url, "")
+	request, err := tool.esClient.NewRequest("GET", url, "")
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -74,16 +78,16 @@ func getMapping(filterIndex string, filterTypes string) eslib.MappingResponse {
 	return mapping
 }
 
-func GetIndexTypeAndTemplateLink() []TemplateLink {
+func (tool *MappingTool) GetIndexTypeAndTemplateLink() []TemplateLink {
 	var links []TemplateLink
 
 	// Parcours des index
-	for indexName, indexValue := range mappings {
+	for indexName, indexValue := range tool.mappings {
 
 		// Puis des types
 		for typeName, mapping := range indexValue.MappingsByType {
 
-			expectedMapping := calculateExpectedMapping(indexName, typeName)
+			expectedMapping := tool.calculateExpectedMapping(indexName, typeName)
 			links = append(links, TemplateLink{
 				IndexName:        indexName,
 				TypeName:         typeName,
@@ -97,8 +101,8 @@ func GetIndexTypeAndTemplateLink() []TemplateLink {
 	return links
 }
 
-func calculateExpectedMapping(indexName string, typeName string) (expectedMapping eslib.MappingsJson) {
-	var applicableTemplates []applicableTemplate = searchForApplicableTemplate(indexName)
+func (tool *MappingTool) calculateExpectedMapping(indexName string, typeName string) (expectedMapping eslib.MappingsJson) {
+	var applicableTemplates []applicableTemplate = tool.searchForApplicableTemplate(indexName)
 	sort.Sort(byOrderSort(applicableTemplates))
 
 	for _, templateValue := range applicableTemplates {
@@ -107,10 +111,10 @@ func calculateExpectedMapping(indexName string, typeName string) (expectedMappin
 	return expectedMapping
 }
 
-func searchForApplicableTemplate(indexName string) (result []applicableTemplate) {
+func (tool *MappingTool) searchForApplicableTemplate(indexName string) (result []applicableTemplate) {
 	// Pour chacun des templates
-	for templateName, templateValue := range templates {
-		pattern := getRegexPatternFromTemplateValue(templateValue.TemplateIndexPattern)
+	for templateName, templateValue := range tool.Templates {
+		pattern := tool.getRegexPatternFromTemplateValue(templateValue.TemplateIndexPattern)
 		regex := regexp.MustCompile(pattern)
 
 		// On regarde si le pattern correspond à l'index
@@ -124,7 +128,7 @@ func searchForApplicableTemplate(indexName string) (result []applicableTemplate)
 	return result
 }
 
-func getRegexPatternFromTemplateValue(templateIndexPattern string) (pattern string) {
+func (tool *MappingTool) getRegexPatternFromTemplateValue(templateIndexPattern string) (pattern string) {
 	pattern = strings.Replace(templateIndexPattern, ".", "\\.", -1)
 	pattern = strings.Replace(pattern, "*", ".*", -1)
 	return pattern
