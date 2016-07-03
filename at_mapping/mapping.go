@@ -32,9 +32,9 @@ type (
 	}
 )
 
-func NewMappingTool(esClientParam *eslib.EsClient) *MappingTool {
+func NewMappingTool(esClientParam eslib.EsClient) *MappingTool {
 	return &MappingTool{
-		esClient: esClientParam,
+		esClient: &esClientParam,
 	}
 }
 
@@ -45,7 +45,7 @@ func (tool *MappingTool) FillInData(filterIndex string, filterTypes string) {
 
 func (tool *MappingTool) getTemplate() eslib.TemplateResponse {
 
-	request, err := tool.esClient.NewRequest("GET", "_template", "")
+	request, err := (*tool.esClient).NewRequest("GET", "_template", "")
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -63,7 +63,7 @@ func (tool *MappingTool) getTemplate() eslib.TemplateResponse {
 func (tool *MappingTool) getMapping(filterIndex string, filterTypes string) eslib.MappingResponse {
 
 	url := fmt.Sprintf("%s/_mapping/%s", filterIndex, filterTypes)
-	request, err := tool.esClient.NewRequest("GET", url, "")
+	request, err := (*tool.esClient).NewRequest("GET", url, "")
 	if err != nil {
 		log.Fatal(err)
 	}

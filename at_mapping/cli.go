@@ -14,7 +14,7 @@ var mappingTool *MappingTool
 func CliRun() {
 	esClient := eslib.NewEsClient()
 	esClient.SetFromFlag(Flags.Hostname)
-	mappingTool = NewMappingTool(esClient)
+	mappingTool = NewMappingTool(&esClient)
 
 	mappingTool.FillInData(Flags.Index, Flags.Types)
 

@@ -14,7 +14,13 @@ const (
 	DefaultPort     = "9200"
 )
 
-type EsClient struct {
+type EsClient interface {
+	String() string
+	SetFromFlag(rawUrl string) error
+	NewRequest(method string, path string, query string) (*http.Request, error)
+}
+
+type EsClientImpl struct {
 	Protocol string
 	Domain   string
 	Port     string
@@ -22,19 +28,19 @@ type EsClient struct {
 	Password string
 }
 
-func NewEsClient() *EsClient {
-	return &EsClient{
+func NewEsClient() EsClientImpl {
+	return EsClientImpl{
 		Protocol: DefaultProtocol,
 		Domain:   DefaultDomain,
 		Port:     DefaultPort,
 	}
 }
 
-func (esClient *EsClient) String() string {
+func (esClient *EsClientImpl) String() string {
 	return fmt.Sprintf("Protocol:%s - Domain:%s - Port: %s - Username: %s - Password: %s", esClient.Protocol, esClient.Domain, esClient.Port, esClient.Username, esClient.Password)
 }
 
-func (esClient *EsClient) SetFromFlag(rawUrl string) error {
+func (esClient *EsClientImpl) SetFromFlag(rawUrl string) error {
 	if rawUrl == "" {
 		return errors.New("Url is empty")
 	}
@@ -60,7 +66,7 @@ func (esClient *EsClient) SetFromFlag(rawUrl string) error {
 	return nil
 }
 
-func (esClient *EsClient) NewRequest(method string, path string, query string) (*http.Request, error) {
+func (esClient *EsClientImpl) NewRequest(method string, path string, query string) (*http.Request, error) {
 	var uri string
 
 	path = strings.Trim(path, "/")
