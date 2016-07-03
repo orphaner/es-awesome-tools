@@ -33,7 +33,7 @@ func (httpMock *httpMock) startMockServer() {
 		func(responseWriter http.ResponseWriter, request *http.Request) {
 			fmt.Fprint(responseWriter, httpMock.mappingJson)
 		})
-	http.ListenAndServe(":" + startupPort, nil)
+	http.ListenAndServe(":"+startupPort, nil)
 }
 
 type mappingTest struct {

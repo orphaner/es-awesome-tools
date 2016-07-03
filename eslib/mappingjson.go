@@ -1,7 +1,7 @@
 package eslib
 
 type (
-	MappingResponse map[string] struct {
+	MappingResponse map[string]struct {
 		MappingsByType map[string]MappingsJson `json:"mappings"`
 	}
 	MappingsJson struct {

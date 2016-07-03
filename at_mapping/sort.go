@@ -25,7 +25,6 @@ func (by byIndexAndTypeSort) Less(i, j int) bool {
 	return false
 }
 
-
 func (by byOrderSort) Len() int {
 	return len(by)
 }
